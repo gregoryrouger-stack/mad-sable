@@ -1228,7 +1228,9 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
       openReservationForm(r.materiel, {
         client: r.client,
         enseigne: r.enseigne,
-        commentaire: r.commentaire
+        commentaire: r.commentaire,
+        debut: r.debut,
+        fin: r.fin
       });
     });
     document.getElementById('cancelBtn').addEventListener('click', closeModal);
@@ -1315,8 +1317,8 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
       </div>
       <div class="modal-body">
         <div class="two-col">
-          <div class="field"><label>Début réservation</label><input type="date" id="f_debut"/></div>
-          <div class="field"><label>Fin réservation</label><input type="date" id="f_fin"/></div>
+          <div class="field"><label>Début réservation</label><input type="date" id="f_debut" value="${prefill.debut||''}"/></div>
+          <div class="field"><label>Fin réservation</label><input type="date" id="f_fin" value="${prefill.fin||''}"/></div>
         </div>
         <div class="field">
           <label>Matériel <span id="availCount" style="text-transform:none;font-weight:600;color:#8a8189;"></span></label>

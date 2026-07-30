@@ -145,6 +145,18 @@
 
   main{ flex:1; padding:22px 24px 60px 24px; max-width:1180px; width:100%; margin:0 auto; }
 
+  .ongoing-block{
+    margin-bottom:22px; border-radius:16px; overflow:hidden;
+    border:1.5px solid var(--bordeaux-light); background:white;
+  }
+  .ongoing-toggle{
+    width:100%; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:14px 18px; background:var(--bordeaux-light); color:white;
+    border:none; cursor:pointer; font-size:14px; font-weight:800; text-align:left;
+  }
+  .ongoing-toggle:hover{ background:var(--bordeaux); }
+  .ongoing-toggle-action{ font-size:14px; font-weight:800; opacity:.9; white-space:nowrap; }
+
   .week-group{
     margin-bottom:18px; padding:18px; border-radius:16px;
     background:white; border:1.5px solid var(--bordeaux-tint);
@@ -436,6 +448,7 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
     search: '',
     filters: { categorie:'', materiel:'', enseigne:'' },
     selectedMaterielId: null,
+    ongoingCollapsed: true,
   };
 
   function activeFilterCount(){
@@ -558,6 +571,7 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
     tabsEl.querySelectorAll('button').forEach(b=>{
       b.addEventListener('click', ()=>{
         state.tab=b.dataset.tab; state.selectedMaterielId=null;
+        if(b.dataset.tab==='reservations') state.ongoingCollapsed = true;
         render();
       });
     });
@@ -764,32 +778,84 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
   }
 
   function renderReservationsTab(){
-    const upcoming = filteredReservations(reservations.filter(r=> !isPast(r.fin)));
-    if(upcoming.length===0){
+    const upcomingAll = filteredReservations(reservations.filter(r=> !isPast(r.fin)));
+    if(upcomingAll.length===0){
       mainEl.innerHTML = emptyState("Aucune réservation à venir", "Crée une nouvelle réservation avec le bouton « Réserver ».");
       return;
     }
-    upcoming.sort((a,b)=> (a.fin||'').localeCompare(b.fin||''));
-    const groups = {};
-    upcoming.forEach(r=>{
-      const key = r.debut+'|'+r.fin;
-      (groups[key] = groups[key]||[]).push(r);
-    });
-    // classement des groupes par date de FIN de réservation (puis début en cas d'égalité)
-    const keys = Object.keys(groups).sort((a,b)=>{
-      const [debutA,finA] = a.split('|');
-      const [debutB,finB] = b.split('|');
-      return finA.localeCompare(finB) || debutA.localeCompare(debutB);
-    });
-    mainEl.innerHTML = keys.map(key=>{
-      const [debut,fin] = key.split('|');
-      const items = sortByCategoryThenNumber(groups[key]);
-      return `<div class="week-group">
-        <div class="week-title">${fmtDate(debut)} <span class="arrow">→</span> ${fmtDate(fin)}</div>
-        <div class="grid">${items.map(cardHtml).join('')}</div>
-      </div>`;
-    }).join('');
+
+    // réservations "en cours" : leur période a déjà commencé (début ≤ aujourd'hui)
+    const ongoing = upcomingAll.filter(r=> r.debut && r.debut <= TODAY);
+    const rest = upcomingAll.filter(r=> !(r.debut && r.debut <= TODAY));
+
+    let html = '';
+
+    if(ongoing.length > 0){
+      const ongoingGroups = {};
+      ongoing.forEach(r=>{
+        const key = r.debut+'|'+r.fin;
+        (ongoingGroups[key] = ongoingGroups[key]||[]).push(r);
+      });
+      const ongoingKeys = Object.keys(ongoingGroups).sort((a,b)=>{
+        const [debutA,finA] = a.split('|');
+        const [debutB,finB] = b.split('|');
+        return finA.localeCompare(finB) || debutA.localeCompare(debutB);
+      });
+      const ongoingContent = ongoingKeys.map(key=>{
+        const [debut,fin] = key.split('|');
+        const items = sortByCategoryThenNumber(ongoingGroups[key]);
+        return `<div class="week-group">
+          <div class="week-title">${fmtDate(debut)} <span class="arrow">→</span> ${fmtDate(fin)}</div>
+          <div class="grid">${items.map(cardHtml).join('')}</div>
+        </div>`;
+      }).join('');
+      html += `
+        <div class="ongoing-block">
+          <button class="ongoing-toggle" id="ongoingToggle">
+            <span class="ongoing-toggle-text">📌 ${ongoing.length} réservation${ongoing.length>1?'s':''} en cours aujourd'hui</span>
+            <span class="ongoing-toggle-action">${state.ongoingCollapsed ? 'Afficher ▾' : 'Réduire ▴'}</span>
+          </button>
+          <div id="ongoingGrid" style="${state.ongoingCollapsed ? 'display:none;' : ''} padding-top:14px;">
+            ${ongoingContent}
+          </div>
+        </div>`;
+    }
+
+    if(rest.length > 0){
+      rest.sort((a,b)=> (a.fin||'').localeCompare(b.fin||''));
+      const groups = {};
+      rest.forEach(r=>{
+        const key = r.debut+'|'+r.fin;
+        (groups[key] = groups[key]||[]).push(r);
+      });
+      // classement des groupes par date de FIN de réservation (puis début en cas d'égalité)
+      const keys = Object.keys(groups).sort((a,b)=>{
+        const [debutA,finA] = a.split('|');
+        const [debutB,finB] = b.split('|');
+        return finA.localeCompare(finB) || debutA.localeCompare(debutB);
+      });
+      html += keys.map(key=>{
+        const [debut,fin] = key.split('|');
+        const items = sortByCategoryThenNumber(groups[key]);
+        return `<div class="week-group">
+          <div class="week-title">${fmtDate(debut)} <span class="arrow">→</span> ${fmtDate(fin)}</div>
+          <div class="grid">${items.map(cardHtml).join('')}</div>
+        </div>`;
+      }).join('');
+    } else if(ongoing.length > 0){
+      html += `<div style="color:#8a8189; padding:20px 4px;">Aucune autre réservation à venir pour l'instant.</div>`;
+    }
+
+    mainEl.innerHTML = html;
     bindCards();
+
+    const toggleBtn = document.getElementById('ongoingToggle');
+    if(toggleBtn){
+      toggleBtn.addEventListener('click', ()=>{
+        state.ongoingCollapsed = !state.ongoingCollapsed;
+        renderReservationsTab();
+      });
+    }
   }
 
 

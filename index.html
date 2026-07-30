@@ -439,10 +439,19 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
     reservations = storedRes || baseRes;
     materiels = storedMat || baseMat;
 
+    let categorieCorrigee = false;
+    reservations.forEach(r=>{
+      const mat = materiels.find(m => m.nom.trim().toLowerCase() === (r.materiel||'').trim().toLowerCase());
+      if(mat && mat.categorie !== r.categorie){
+        r.categorie = mat.categorie;
+        categorieCorrigee = true;
+      }
+    });
+
     if(!storedRes) persistReservations();
     if(!storedMat) persistMateriels();
+    if(storedRes && categorieCorrigee) persistReservations();
   }
-
   let state = {
     tab: 'reservations',
     search: '',
@@ -1297,7 +1306,7 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
       const rd = document.getElementById('f_rendu');
       if(rd) r.rendu = rd.checked;
       const matched = materielByName(r.materiel);
-      if(matched) r.icone = matched.icone;
+      if(matched){ r.icone = matched.icone; r.categorie = matched.categorie; }
       persistReservations();
       closeModal(); toast("Réservation mise à jour."); render();
     });

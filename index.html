@@ -986,26 +986,27 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
     return order;
   }
 
-  function openMaterielCreateForm(){
+  function openMaterielCreateForm(prefill){
+    prefill = prefill || {};
     const cats = allCategories();
     modal.innerHTML = `
       <div class="modal-head">
-        <div><div class="title">Nouveau matériel</div><div class="sub">Ajouter à une catégorie existante</div></div>
+        <div><div class="title">${prefill.nom?'Dupliquer un matériel':'Nouveau matériel'}</div><div class="sub">${prefill.nom?"Modifie le nom avant d'enregistrer":'Ajouter à une catégorie existante'}</div></div>
         <button class="close-x" id="closeX">✕</button>
       </div>
       <div class="modal-body">
-        <div class="field"><label>Nom</label><input id="fm_nom" placeholder="Ex : TP - 13"/></div>
+        <div class="field"><label>Nom</label><input id="fm_nom" placeholder="Ex : TP - 13" value="${(prefill.nom||'').replace(/"/g,'&quot;')}"/></div>
         <div class="field"><label>Catégorie</label>
-          <select id="fm_cat">${cats.map(c=>`<option>${c}</option>`).join('')}</select>
+          <select id="fm_cat">${cats.map(c=>`<option ${c===prefill.categorie?'selected':''}>${c}</option>`).join('')}</select>
         </div>
         <div class="field"><label>État</label>
-          <select id="fm_etat">${ETATS_MATERIEL.map(l=>`<option>${l}</option>`).join('')}</select>
+          <select id="fm_etat">${ETATS_MATERIEL.map(l=>`<option ${l===prefill.etat?'selected':''}>${l}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Commentaire</label><textarea id="fm_comment" rows="2"></textarea></div>
+        <div class="field"><label>Commentaire</label><textarea id="fm_comment" rows="2">${prefill.commentaire||''}</textarea></div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" id="cancelBtn">Annuler</button>
-        <button class="btn btn-solid" id="saveBtn">Ajouter</button>
+        <button class="btn btn-solid" id="saveBtn">${prefill.nom?'Dupliquer':'Ajouter'}</button>
       </div>
     `;
     overlay.classList.add('show');
@@ -1023,7 +1024,8 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
       }
       materiels.push({
         id: 'mat-new-'+(nextId++),
-        nom, categorie, etat, icone:'', photo:'', commentaire
+        nom, categorie, etat,
+        icone: prefill.icone||'', photo: prefill.photo||'', commentaire
       });
       persistMateriels();
       closeModal();
@@ -1059,7 +1061,8 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
           <div style="font-weight:700;">${m.categorie}</div>
           <div style="color:#8a8189;font-size:12.5px; margin-top:6px;">📊 Réservé <strong style="color:var(--ink);">${countYear} fois</strong> depuis le 1er janvier ${anneeEnCours}</div>
         </div>
-        <button class="btn btn-solid" style="margin-left:auto;" id="editMatBtn">✎ Modifier</button>
+        <button class="btn btn-ghost" style="margin-left:auto;" id="dupMatBtn">⧉ Dupliquer</button>
+        <button class="btn btn-solid" id="editMatBtn">✎ Modifier</button>
       </div>
       <div style="display:inline-block;${etatTagStyle(m.etat)}padding:6px 14px;border-radius:8px;font-weight:700;font-size:13px;margin-bottom:20px;">${m.etat || 'Non renseigné'}</div>
       ${enPanne && upcoming.length===0 ? `<div class="conflict-tag" style="display:inline-flex;margin-left:10px;">⚠ Indisponible à la réservation</div>` : ''}
@@ -1098,6 +1101,16 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
     `;
     document.getElementById('backToMat').addEventListener('click', ()=>{ state.selectedMaterielId=null; renderMain(); });
     document.getElementById('editMatBtn').addEventListener('click', ()=> openMaterielForm(m.id));
+    document.getElementById('dupMatBtn').addEventListener('click', ()=>{
+      openMaterielCreateForm({
+        nom: m.nom + ' (copie)',
+        categorie: m.categorie,
+        etat: 'OK',
+        icone: m.icone,
+        photo: m.photo,
+        commentaire: m.commentaire
+      });
+    });
     mainEl.querySelectorAll('.res-mini').forEach(el=>{
       el.addEventListener('click', ()=> openReservationDetail(el.dataset.id));
     });
@@ -1204,12 +1217,20 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
       </div>
       <div class="modal-foot">
         <button class="btn btn-danger" id="delBtn">Supprimer</button>
+        <button class="btn btn-ghost" id="dupBtn">⧉ Dupliquer</button>
         <button class="btn btn-ghost" id="cancelBtn">Annuler</button>
         <button class="btn btn-solid" id="saveBtn">Enregistrer</button>
       </div>
     `;
     overlay.classList.add('show');
     document.getElementById('closeX').addEventListener('click', closeModal);
+    document.getElementById('dupBtn').addEventListener('click', ()=>{
+      openReservationForm(r.materiel, {
+        client: r.client,
+        enseigne: r.enseigne,
+        commentaire: r.commentaire
+      });
+    });
     document.getElementById('cancelBtn').addEventListener('click', closeModal);
     document.getElementById('delBtn').addEventListener('click', ()=>{
       reservations = reservations.filter(x=>x.id!==id);
@@ -1285,7 +1306,8 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
     }</optgroup>`).join('');
   }
 
-  function openReservationForm(presetMateriel){
+  function openReservationForm(presetMateriel, prefill){
+    prefill = prefill || {};
     modal.innerHTML = `
       <div class="modal-head">
         <div><div class="title">Nouvelle réservation</div><div class="sub">Choisis d'abord les dates</div></div>
@@ -1300,11 +1322,15 @@ MATERIELS_JSON = [{"id": "Toit Goudale 1", "nom": "Toit Goudale 1", "categorie":
           <label>Matériel <span id="availCount" style="text-transform:none;font-weight:600;color:#8a8189;"></span></label>
           <select id="f_materiel" disabled><option value="">— Choisis d'abord les dates —</option></select>
         </div>
-        <div class="field"><label>Nom client</label><input id="f_client" placeholder="Nom du client ou de l'association"/></div>
+        <div class="field"><label>Nom client</label><input id="f_client" placeholder="Nom du client ou de l'association" value="${(prefill.client||'').replace(/"/g,'&quot;')}"/></div>
         <div class="field"><label>Enseigne</label>
-          <select id="f_enseigne"><option value="">Sélectionner une option</option><option>Festicave</option><option>Stokbox</option></select>
+          <select id="f_enseigne">
+            <option value="">Sélectionner une option</option>
+            <option ${prefill.enseigne==='Festicave'?'selected':''}>Festicave</option>
+            <option ${prefill.enseigne==='Stokbox'?'selected':''}>Stokbox</option>
+          </select>
         </div>
-        <div class="field"><label>Commentaire</label><textarea id="f_comment" rows="2"></textarea></div>
+        <div class="field"><label>Commentaire</label><textarea id="f_comment" rows="2">${prefill.commentaire||''}</textarea></div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" id="cancelBtn">Annuler</button>

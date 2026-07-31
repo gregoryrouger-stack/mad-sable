@@ -876,17 +876,17 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
     }
 
     if(rest.length > 0){
-      rest.sort((a,b)=> (a.fin||'').localeCompare(b.fin||''));
+      rest.sort((a,b)=> (a.debut||'').localeCompare(b.debut||''));
       const groups = {};
       rest.forEach(r=>{
         const key = r.debut+'|'+r.fin;
         (groups[key] = groups[key]||[]).push(r);
       });
-      // classement des groupes par date de FIN de réservation (puis début en cas d'égalité)
+      // classement des groupes par date de DÉBUT de réservation (puis fin en cas d'égalité)
       const keys = Object.keys(groups).sort((a,b)=>{
         const [debutA,finA] = a.split('|');
         const [debutB,finB] = b.split('|');
-        return finA.localeCompare(finB) || debutA.localeCompare(debutB);
+        return debutA.localeCompare(debutB) || finA.localeCompare(finB);
       });
       html += keys.map(key=>{
         const [debut,fin] = key.split('|');

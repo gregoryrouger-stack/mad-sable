@@ -557,6 +557,22 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
     return null;
   }
 
+  // relit les données côté serveur (D1), sans perturber une saisie en cours (modale ouverte)
+  async function refreshDataFromServer(){
+    if(overlay.classList.contains('show')) return;
+    try{
+      const [rRes, rMat] = await Promise.all([
+        fetch('/api/reservations', {cache:'no-store'}),
+        fetch('/api/materiels', {cache:'no-store'})
+      ]);
+      if(rRes.ok){ const data = await rRes.json(); if(data) reservations = data; }
+      if(rMat.ok){ const data = await rMat.json(); if(data) materiels = data; }
+      render();
+    }catch(e){
+      console.error("Rafraîchissement automatique impossible:", e);
+    }
+  }
+
   let state = {
     tab: 'reservations',
     search: '',
@@ -1780,6 +1796,12 @@ MATERIELS_JSON = [{"id": "mat-0000", "nom": "Toit Goudale 1", "categorie": "8- T
     await loadData();
     dataReady = true;
     render();
+
+    // rafraîchissement automatique : toutes les 2 minutes, et à chaque retour sur l'onglet
+    setInterval(refreshDataFromServer, 2*60*1000);
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState === 'visible') refreshDataFromServer();
+    });
   }
 
   boot();

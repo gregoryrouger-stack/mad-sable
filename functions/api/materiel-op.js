@@ -42,6 +42,9 @@ export async function onRequestPost({ request, env }) {
 
   if (op === "create") {
     if (!item || !item.id) return errResponse(400, "item manquant");
+    if (list.some((m) => m.id === item.id)) {
+      return errResponse(409, "Conflit d'identifiant — réessaie (recharge la page si ça persiste).");
+    }
     if (list.some((m) => m.nom.trim().toLowerCase() === item.nom.trim().toLowerCase())) {
       return errResponse(409, "Un matériel porte déjà ce nom.");
     }

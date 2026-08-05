@@ -43,6 +43,9 @@ export async function onRequestPost({ request, env }) {
 
   if (op === "create") {
     if (!item || !item.id) return errResponse(400, "item manquant");
+    if (list.some((r) => r.id === item.id)) {
+      return errResponse(409, "Conflit d'identifiant — réessaie (recharge la page si ça persiste).");
+    }
     list.push(item);
   } else if (op === "update") {
     if (!id || !patch) return errResponse(400, "id ou patch manquant");
